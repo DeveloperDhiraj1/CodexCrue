@@ -1,0 +1,1 @@
+Generate a multi-phase learning path for the goal '{goal}' suitable for an experience level of '{experience}'. Break it down into phases with milestone titles and required skills.

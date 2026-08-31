@@ -1,0 +1,21 @@
+{
+  "name": "cortexcrew",
+  "version": "1.0.0",
+  "description": "AI-Powered Personalized Learning Path Recommender EdTech SaaS",
+  "main": "Backend/server.js",
+  "scripts": {
+    "install:all": "npm install && cd frontend && npm install && cd ../Backend && npm install",
+    "dev:backend": "cd Backend && node server.js",
+    "dev:frontend": "cd frontend && npm run dev",
+    "docker:up": "docker-compose up --build"
+  },
+  "keywords": [
+    "edtech",
+    "ai",
+    "recommendation-system",
+    "saas",
+    "machine-learning"
+  ],
+  "author": "CortexCrew Team",
+  "license": "MIT"
+}

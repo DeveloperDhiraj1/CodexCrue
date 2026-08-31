@@ -1,0 +1,4 @@
+Compare the learner's current skills against the target goal requirements.
+Goal: {goal}
+Current Skills: {current_skills}
+Return a JSON object with missing skills and priority ranking.

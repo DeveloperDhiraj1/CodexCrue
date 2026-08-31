@@ -1,0 +1,44 @@
+version: '3.8'
+
+services:
+  mongodb:
+    image: mongo:latest
+    container_name: cortexcrew_mongo
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+
+  redis:
+    image: redis:alpine
+    container_name: cortexcrew_redis
+    ports:
+      - "6379:6379"
+
+  backend:
+    build: ./Backend
+    container_name: cortexcrew_backend
+    ports:
+      - "5000:5000"
+    environment:
+      - PORT=5000
+      - MONGO_URI=mongodb://mongodb:27017/cortexcrew
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - JWT_SECRET=${JWT_SECRET:?Set JWT_SECRET in the environment}
+      - ML_SERVICE_URL=http://ml-service:8000
+      - CORS_ORIGIN=http://localhost:3000
+    depends_on:
+      - mongodb
+      - redis
+
+  ml-service:
+    build: ./ml-service
+    container_name: cortexcrew_ml
+    ports:
+      - "8000:8000"
+    environment:
+      - PORT=8000
+
+volumes:
+  mongo_data:

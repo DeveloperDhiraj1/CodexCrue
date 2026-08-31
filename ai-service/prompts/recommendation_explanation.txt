@@ -1,0 +1,1 @@
+Explain why the course '{course_title}' was recommended for the goal '{goal}' given the user's skills: {skills}. Keep it concise and motivating.
