@@ -81,7 +81,7 @@ export default function PublicLayout({ children }) {
           </div>
         </div>
         <div className="footer-bottom">
-          <span>&copy; 2025 CodexCrue. All rights reserved.</span>
+          <span>&copy; 2026 CodexCrue. All rights reserved.</span>
           <div className="footer-bottom-links">
             <Link to="/privacy">Privacy</Link>
             <Link to="/terms">Terms</Link>
