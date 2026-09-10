@@ -3,6 +3,15 @@ import { useNavigate, Link } from 'react-router-dom';
 import api from '../../services/api';
 import AppShell from '../../components/common/AppShell';
 
+function getTimeGreeting(date) {
+  const hour = date.getHours();
+
+  if (hour >= 5 && hour < 12) return 'Good morning';
+  if (hour >= 12 && hour < 17) return 'Good afternoon';
+  if (hour >= 17 && hour < 21) return 'Good evening';
+  return 'Good night';
+}
+
 const Dashboard = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
@@ -11,6 +20,7 @@ const Dashboard = () => {
   const [recommendations, setRecommendations] = useState([]);
   const [learningPath, setLearningPath] = useState(null);
   const [progress, setProgress] = useState([]);
+  const [currentTime, setCurrentTime] = useState(() => new Date());
 
   useEffect(() => {
     const fetchDashboardData = async () => {
@@ -55,6 +65,11 @@ const Dashboard = () => {
     fetchDashboardData();
   }, [navigate]);
 
+  useEffect(() => {
+    const timer = window.setInterval(() => setCurrentTime(new Date()), 60000);
+    return () => window.clearInterval(timer);
+  }, []);
+
   if (loading) {
     return (
       <AppShell>
@@ -65,139 +80,80 @@ const Dashboard = () => {
     );
   }
 
-  const firstName = profile?.name ? profile.name.split(' ')[0] : 'Learner';
+  const firstName = (profile?.userId?.name || profile?.name || 'Learner').split(' ')[0];
+  const greeting = getTimeGreeting(currentTime);
   const currentGoal = profile?.learningGoal || 'Set your goal';
   const overallProgress = learningPath?.overallProgress || 0;
   const completedCoursesCount = profile?.completedCourses?.length || 0;
   
   const milestones = learningPath?.milestones || [];
   const nextMilestones = milestones.slice(0, 3);
-  
   const topRecommendations = recommendations.slice(0, 2);
+  const activeMilestone = nextMilestones[0];
+  const progressValue = Math.min(100, Math.max(0, Number(overallProgress) || 0));
 
   return (
     <AppShell>
-      <div className="page-wrap">
-        <div className="dashboard-welcome card">
-          <div className="card-header">
-            <h1 className="page-title">Good morning, {firstName}!</h1>
-            <div className="welcome-goal badge badge-green">{currentGoal}</div>
+      <div className="page-wrap dashboard-page">
+        <div className="dashboard-heading">
+          <div>
+            <span className="page-eyebrow">Your learning cockpit</span>
+            <h1 className="page-title">Ready for your next win?</h1>
+            <p className="page-subtitle">A clear view of your progress, next lesson, and personalised recommendations.</p>
           </div>
-          <div className="card-body">
-            <div className="progress-bar">
-              <div className="progress-fill" style={{ width: `${overallProgress}%` }}></div>
-            </div>
-            <p className="page-subtitle">You are {overallProgress}% towards your current goal.</p>
-            <div style={{ marginTop: '1rem', display: 'flex', gap: '0.5rem' }}>
-              <button className="btn btn-primary" onClick={() => navigate('/learning-path')}>
-                Continue Learning
+          <span className="dashboard-date">{currentTime.toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric' })}</span>
+        </div>
+
+        <section className="dashboard-welcome dashboard-hero">
+          <div className="dashboard-hero-copy">
+            <span className="welcome-goal">Current focus · {currentGoal}</span>
+            <h2>{greeting}, {firstName}!</h2>
+            <p>{progressValue === 0 ? 'Start with one small step today and build your learning momentum.' : `You are ${progressValue}% through your current learning path. Keep the streak going.`}</p>
+            <div className="welcome-actions">
+              <button className="welcome-btn welcome-btn-white" onClick={() => navigate('/learning-path')}>
+                {progressValue > 0 ? 'Continue learning' : 'Build my path'} <span aria-hidden="true">→</span>
               </button>
-              <button className="btn btn-secondary" onClick={() => navigate('/recommendations')}>
-                View Recommendations
+              <button className="welcome-btn welcome-btn-outline" onClick={() => navigate('/recommendations')}>
+                Explore courses
               </button>
             </div>
           </div>
+          <div className="dashboard-progress-ring" style={{ '--progress': `${progressValue * 3.6}deg` }} aria-label={`${progressValue}% path progress`}>
+            <div className="dashboard-progress-ring-inner">
+              <strong>{progressValue}%</strong>
+              <span>path done</span>
+            </div>
+          </div>
+        </section>
+
+        <section className="stats-grid dashboard-stats" aria-label="Learning summary">
+          <div className="stat-card dashboard-stat-card"><span className="dashboard-stat-icon dashboard-stat-icon-green">↗</span><div><div className="stat-label">Path progress</div><div className="stat-value">{progressValue}%</div><div className="stat-note">Keep moving forward</div></div></div>
+          <div className="stat-card dashboard-stat-card"><span className="dashboard-stat-icon dashboard-stat-icon-blue">✓</span><div><div className="stat-label">Courses completed</div><div className="stat-value">{completedCoursesCount}</div><div className="stat-note">Nice work so far</div></div></div>
+          <div className="stat-card dashboard-stat-card"><span className="dashboard-stat-icon dashboard-stat-icon-orange">◎</span><div><div className="stat-label">Active goals</div><div className="stat-value">{goals.length || (currentGoal !== 'Set your goal' ? 1 : 0)}</div><div className="stat-note">One step at a time</div></div></div>
+          <div className="stat-card dashboard-stat-card"><span className="dashboard-stat-icon dashboard-stat-icon-purple">✦</span><div><div className="stat-label">For you</div><div className="stat-value">{recommendations.length}</div><div className="stat-note">Fresh recommendations</div></div></div>
+        </section>
+
+        <div className="dash-grid dashboard-content-grid">
+          <section className="card dashboard-panel">
+            <div className="dashboard-panel-heading"><div><span className="page-eyebrow">Roadmap</span><h2 className="card-title">Your learning path</h2></div><Link to="/learning-path" className="dashboard-text-link">View full path →</Link></div>
+            {nextMilestones.length > 0 ? <div className="dashboard-milestones">
+              {nextMilestones.map((milestone, idx) => <div key={milestone._id || idx} className={`dashboard-milestone ${idx === 0 ? 'is-current' : ''}`}>
+                <div className="dashboard-milestone-number">{idx + 1}</div>
+                <div className="dashboard-milestone-content"><div className="dashboard-milestone-top"><strong>{milestone.title}</strong>{idx === 0 && <span className="badge badge-green">Up next</span>}</div><p>{milestone.skills?.slice(0, 3).join(' · ') || 'Build practical skills'}</p><div className="progress-bar"><div className="progress-fill" style={{ width: `${milestone.progress || 0}%` }}></div></div></div><span className="dashboard-milestone-percent">{milestone.progress || 0}%</span>
+              </div>)}
+            </div> : <div className="dashboard-empty"><span className="dashboard-empty-icon">✦</span><strong>Your path starts here</strong><p>Create a roadmap matched to your goals, skills, and available time.</p><button className="btn btn-primary" onClick={() => navigate('/learning-path')}>Generate my path</button></div>}
+            {activeMilestone && <button className="dashboard-next-lesson" onClick={() => navigate('/learning-path')}><span>Next best action</span><strong>Continue with {activeMilestone.title}</strong><span aria-hidden="true">→</span></button>}
+          </section>
+
+          <section className="card dashboard-panel">
+            <div className="dashboard-panel-heading"><div><span className="page-eyebrow">Curated for you</span><h2 className="card-title">Recommended courses</h2></div><Link to="/recommendations" className="dashboard-text-link">See all →</Link></div>
+            {topRecommendations.length > 0 ? <div className="dashboard-recommendations">
+              {topRecommendations.map((rec, idx) => { const course = typeof rec.courseId === 'object' ? rec.courseId : null; const title = course?.title || rec.courseTitle || 'Course'; const provider = course?.provider || rec.provider || 'Provider'; const scorePct = Math.round((rec.score || 0) * 100); return <div key={rec._id || idx} className="dashboard-recommendation"><div className="dashboard-course-mark">{title.charAt(0).toUpperCase()}</div><div className="dashboard-course-info"><strong>{title}</strong><span>{provider}</span><small>{rec.explanation || 'Selected to support your learning goal.'}</small></div><span className="dashboard-match">{scorePct}%<small>match</small></span></div>; })}
+            </div> : <div className="dashboard-empty"><span className="dashboard-empty-icon">✦</span><strong>Recommendations are on the way</strong><p>Complete your profile or generate a path to unlock better matches.</p><button className="btn btn-secondary" onClick={() => navigate('/recommendations')}>Find courses</button></div>}
+          </section>
         </div>
 
-        <div className="stats-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1rem', margin: '2rem 0' }}>
-          <div className="card">
-            <div className="card-body">
-              <div className="page-eyebrow">Path Progress</div>
-              <div className="page-title">{overallProgress}%</div>
-            </div>
-          </div>
-          <div className="card">
-            <div className="card-body">
-              <div className="page-eyebrow">Courses Completed</div>
-              <div className="page-title">{completedCoursesCount}</div>
-            </div>
-          </div>
-          <div className="card">
-            <div className="card-body">
-              <div className="page-eyebrow">Current Goal</div>
-              <div className="page-title" style={{ fontSize: '1.25rem' }}>{currentGoal}</div>
-            </div>
-          </div>
-          <div className="card">
-            <div className="card-body">
-              <div className="page-eyebrow">Recommended</div>
-              <div className="page-title">{recommendations.length}</div>
-            </div>
-          </div>
-        </div>
-
-        <div className="dash-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2rem' }}>
-          <div className="card">
-            <div className="card-header">
-              <h2 className="card-title">Your Learning Path</h2>
-            </div>
-            <div className="card-body">
-              {nextMilestones.length > 0 ? (
-                <div>
-                  {nextMilestones.map((milestone, idx) => (
-                    <div key={milestone._id || idx} className="milestone-item" style={{ marginBottom: '1rem' }}>
-                      <div className="page-eyebrow">Milestone {idx + 1}</div>
-                      <div className="page-title" style={{ fontSize: '1.1rem' }}>{milestone.title}</div>
-                      <p className="page-subtitle">{milestone.skills?.join(', ')}</p>
-                      <div className="progress-bar" style={{ marginTop: '0.5rem' }}>
-                        <div className="progress-fill" style={{ width: `${milestone.progress || 0}%` }}></div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="empty-state">
-                  <p>No active learning path.</p>
-                  <button className="btn btn-primary" onClick={() => navigate('/learning-path')}>
-                    Generate your path
-                  </button>
-                </div>
-              )}
-            </div>
-          </div>
-
-          <div className="card">
-            <div className="card-header">
-              <h2 className="card-title">Recommended for You</h2>
-            </div>
-            <div className="card-body">
-              {topRecommendations.length > 0 ? (
-                <div>
-                  {topRecommendations.map((rec, idx) => {
-                    const course = typeof rec.courseId === 'object' ? rec.courseId : null;
-                    const title = course?.title || rec.courseTitle || 'Course';
-                    const provider = course?.provider || rec.provider || 'Provider';
-                    const scorePct = Math.round((rec.score || 0) * 100);
-                    return (
-                      <div key={rec._id || idx} className="rec-card" style={{ marginBottom: '1rem', padding: '1rem', border: '1px solid #eee', borderRadius: '8px' }}>
-                        <h3 className="rec-title" style={{ margin: '0 0 0.25rem 0' }}>{title}</h3>
-                        <p className="page-subtitle" style={{ margin: '0 0 0.5rem 0' }}>{provider}</p>
-                        <div className="badge badge-green" style={{ marginBottom: '0.5rem' }}>{scorePct}% Match</div>
-                        <p style={{ fontSize: '0.9rem' }}>{rec.explanation}</p>
-                      </div>
-                    );
-                  })}
-                </div>
-              ) : (
-                <div className="empty-state">
-                  <p>No recommendations currently available.</p>
-                  <button className="btn btn-secondary" onClick={() => navigate('/recommendations')}>
-                    Get Recommendations
-                  </button>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-
-        <div style={{ marginTop: '2rem' }}>
-          <h2 className="card-title">What's next?</h2>
-          <div style={{ display: 'flex', gap: '1rem', marginTop: '1rem' }}>
-            <Link to="/skill-gap" className="quick-link btn btn-ghost">Skill Gap</Link>
-            <Link to="/ai-assistant" className="quick-link btn btn-ghost">AI Assistant</Link>
-            <Link to="/assessments" className="quick-link btn btn-ghost">Assessments</Link>
-          </div>
-        </div>
+        <section className="dashboard-quick-section"><div className="dashboard-panel-heading"><div><span className="page-eyebrow">Keep growing</span><h2 className="card-title">Quick actions</h2></div></div><div className="dashboard-quick-grid"><Link to="/skill-gap" className="dashboard-quick-card"><span className="dashboard-quick-icon">⌁</span><span><strong>Check skill gaps</strong><small>See what to learn next</small></span><span>→</span></Link><Link to="/ai-assistant" className="dashboard-quick-card"><span className="dashboard-quick-icon">✦</span><span><strong>Ask your mentor</strong><small>Get unstuck in minutes</small></span><span>→</span></Link><Link to="/assessments" className="dashboard-quick-card"><span className="dashboard-quick-icon">✓</span><span><strong>Take an assessment</strong><small>Measure your progress</small></span><span>→</span></Link></div></section>
       </div>
     </AppShell>
   );

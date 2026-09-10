@@ -23,6 +23,7 @@ const LearningPath = () => {
   });
 
   const trackingInterval = useRef(null);
+  const trackingSession = useRef(null);
 
   useEffect(() => {
     fetchData();
@@ -73,25 +74,41 @@ const LearningPath = () => {
   };
 
   const startTracking = (courseId, url) => {
-    setTrackingCourse(courseId);
-    if (url) window.open(url, '_blank');
-
+    if (!courseId) return;
     if (trackingInterval.current) clearInterval(trackingInterval.current);
+    setTrackingCourse(courseId);
+    trackingSession.current = { courseId, lastLoggedAt: Date.now() };
+    if (url) window.open(url, '_blank');
     trackingInterval.current = setInterval(async () => {
+      const session = trackingSession.current;
+      if (!session) return;
+      const minutes = Math.floor((Date.now() - session.lastLoggedAt) / 60000);
+      if (minutes < 1) return;
       try {
-        await api.post('/progress/session', { courseId });
+        await api.post('/progress/session', { courseId: session.courseId, durationMinutes: Math.min(1440, minutes), note: 'Roadmap session auto-tracked' });
+        trackingSession.current = { ...session, lastLoggedAt: session.lastLoggedAt + minutes * 60000 };
+        await fetchData();
       } catch (err) {
         console.error('Failed to track progress:', err);
       }
     }, 30000);
   };
 
-  const stopTracking = () => {
+  const stopTracking = async () => {
+    const session = trackingSession.current;
+    if (session) {
+      const minutes = Math.floor((Date.now() - session.lastLoggedAt) / 60000);
+      if (minutes >= 1) {
+        try { await api.post('/progress/session', { courseId: session.courseId, durationMinutes: Math.min(1440, minutes), note: 'Roadmap session auto-tracked' }); } catch (err) { console.error('Failed to save final study interval:', err); }
+      }
+    }
     setTrackingCourse(null);
+    trackingSession.current = null;
     if (trackingInterval.current) {
       clearInterval(trackingInterval.current);
       trackingInterval.current = null;
     }
+    if (session) fetchData();
   };
 
   const handleInputChange = (e) => {
@@ -210,7 +227,7 @@ const LearningPath = () => {
                             <strong>Courses:</strong>
                             <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '1rem', marginTop: '0.5rem' }}>
                               {milestone.courses.map((course, i) => {
-                                const cId = course.courseId?._id || course.courseId;
+                                const cId = course._id || course.courseId?._id || course.courseId;
                                 const cTitle = course.courseId?.title || course.title || 'Course';
                                 const cProvider = course.courseId?.provider || course.provider || 'Provider';
                                 const cLang = course.courseId?.language || 'EN';

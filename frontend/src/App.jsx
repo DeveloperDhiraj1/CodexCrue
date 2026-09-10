@@ -18,6 +18,7 @@ const Home = lazy(() => import('./pages/public/Home'));
 const About = lazy(() => import('./pages/public/About'));
 const PublicCourses = lazy(() => import('./pages/public/Courses'));
 const PublicCourseDetails = lazy(() => import('./pages/public/CourseDetails'));
+const Legal = lazy(() => import('./pages/public/Legal'));
 
 // Learner Pages
 const Dashboard = lazy(() => import('./pages/learner/Dashboard'));
@@ -27,6 +28,7 @@ const Courses = lazy(() => import('./pages/learner/Courses'));
 const CourseDetails = lazy(() => import('./pages/learner/CourseDetails'));
 const AIAssistant = lazy(() => import('./pages/learner/AIAssistant'));
 const Profile = lazy(() => import('./pages/learner/Profile'));
+const Settings = lazy(() => import('./pages/learner/Settings'));
 const Goal = lazy(() => import('./pages/learner/Goal'));
 const Progress = lazy(() => import('./pages/learner/Progress'));
 const Assessments = lazy(() => import('./components/learning/Assessments'));
@@ -97,6 +99,8 @@ const App = () => {
             <Route path="/" element={<Home />} />
             <Route path="/features" element={<Home />} />
             <Route path="/about" element={<About />} />
+            <Route path="/privacy" element={<Legal type="privacy" />} />
+            <Route path="/terms" element={<Legal type="terms" />} />
             <Route path="/courses" element={<PublicCourses />} />
             <Route path="/courses/:id" element={<CourseDetailsRoute />} />
             
@@ -113,7 +117,7 @@ const App = () => {
             <Route path="/skill-gap" element={<ProtectedRoute><SkillGap /></ProtectedRoute>} />
             <Route path="/ai-assistant" element={<ProtectedRoute><AIAssistant /></ProtectedRoute>} />
             <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
-            <Route path="/settings" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
+            <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
             <Route path="/goal" element={<ProtectedRoute><Goal /></ProtectedRoute>} />
             <Route path="/my-goal" element={<ProtectedRoute><Goal /></ProtectedRoute>} />
             <Route path="/progress" element={<ProtectedRoute><Progress /></ProtectedRoute>} />
