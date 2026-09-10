@@ -52,6 +52,13 @@ app.use(express.json({ limit: '1mb' }));
 app.use(express.urlencoded({ extended: true, limit: '1mb' }));
 app.use(cookieParser());
 
+app.get('/', (req, res) => {
+  res.json({ 
+    status: 'success', 
+    message: 'CortexCrew API is running live! 🚀' 
+  });
+});
+
 app.get('/health', (req, res) => {
   res.status(200).json({ success: true, message: 'CodexCrue Backend API is alive.', data: { status: 'alive' } });
 });
