@@ -13,15 +13,15 @@ const MAX_OTP_ATTEMPTS = 5;
 //   ? nodemailer.createTransport({ service: 'gmail', auth: { user: process.env.EMAIL_USER, pass: process.env.EMAIL_PASS } })
 //   : null;
 
-const transporter = process.env.EMAIL_USER && process.env.EMAIL_PASS
+const transporter = config.emailUser && config.emailPass
   ? nodemailer.createTransport({
-      host: 'smtp.gmail.com',
-      port: 587,
-      secure: false,
-      requireTLS: true,
+      host: config.emailHost,
+      port: config.emailPort,
+      secure: config.emailSecure,
+      requireTLS: !config.emailSecure,
       auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASS
+        user: config.emailUser,
+        pass: config.emailPass
       },
       family: 4,
       connectionTimeout: 30000,
@@ -75,7 +75,12 @@ async function sendEmailOrFail(message) {
     }
     return;
   }
-  await transporter.sendMail(message);
+  try {
+    await transporter.sendMail(message);
+  } catch (error) {
+    console.error('[Email] Delivery failed:', error.code || error.message);
+    throw Object.assign(new Error('Unable to send verification email right now.'), { statusCode: 503 });
+  }
 }
 
 exports.register = async (req, res, next) => {
@@ -98,7 +103,7 @@ exports.register = async (req, res, next) => {
     await user.save();
 
     await sendEmailOrFail({
-      from: process.env.EMAIL_FROM || process.env.EMAIL_USER,
+      from: config.emailFrom,
       to: email,
       subject: 'Verify your CodexCrue account',
       text: `Your verification code is ${otp}. It expires in 10 minutes.`
@@ -202,7 +207,7 @@ exports.forgotPassword = async (req, res, next) => {
       user.resetPasswordExpires = new Date(Date.now() + 30 * 60 * 1000);
       await user.save();
       await sendEmailOrFail({
-        from: process.env.EMAIL_FROM || process.env.EMAIL_USER,
+        from: config.emailFrom,
         to: user.email,
         subject: 'Reset your CodexCrue password',
         text: `Use this password reset token within 30 minutes: ${rawToken}`
