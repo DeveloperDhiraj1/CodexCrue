@@ -9,8 +9,23 @@ const { signAccessToken, createRefreshToken, hashToken, hashRefreshToken, hashOt
 
 const OTP_TTL_MS = 10 * 60 * 1000;
 const MAX_OTP_ATTEMPTS = 5;
+// const transporter = process.env.EMAIL_USER && process.env.EMAIL_PASS
+//   ? nodemailer.createTransport({ service: 'gmail', auth: { user: process.env.EMAIL_USER, pass: process.env.EMAIL_PASS } })
+//   : null;
+
 const transporter = process.env.EMAIL_USER && process.env.EMAIL_PASS
-  ? nodemailer.createTransport({ service: 'gmail', auth: { user: process.env.EMAIL_USER, pass: process.env.EMAIL_PASS } })
+  ? nodemailer.createTransport({
+      host: 'smtp.gmail.com',
+      port: 587,
+      secure: false,
+      auth: {
+        user: process.env.EMAIL_USER,
+        pass: process.env.EMAIL_PASS
+      },
+      connectionTimeout: 10000,
+      greetingTimeout: 10000,
+      socketTimeout: 15000
+    })
   : null;
 
 const cookieOptions = () => ({
