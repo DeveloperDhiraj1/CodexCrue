@@ -4,10 +4,14 @@ const path = require('path');
 dotenv.config({ path: path.resolve(__dirname, '../../.env') });
 
 if (process.env.NODE_ENV === 'production') {
-  const missing = [
-    'MONGO_URI', 'JWT_SECRET', 'JWT_REFRESH_SECRET', 'CORS_ORIGIN',
-    'EMAIL_USER', 'EMAIL_PASS'
-  ].filter((name) => !process.env[name]);
+  const missing = ['MONGO_URI', 'JWT_SECRET', 'JWT_REFRESH_SECRET', 'CORS_ORIGIN']
+    .filter((name) => !process.env[name]);
+  const emailProvider = (process.env.EMAIL_PROVIDER || 'smtp').toLowerCase();
+  if (emailProvider === 'resend' && !process.env.RESEND_API_KEY) missing.push('RESEND_API_KEY');
+  if (emailProvider === 'smtp') {
+    if (!process.env.EMAIL_USER) missing.push('EMAIL_USER');
+    if (!process.env.EMAIL_PASS) missing.push('EMAIL_PASS');
+  }
   if (missing.length > 0) {
     throw new Error(`Missing required production environment variables: ${missing.join(', ')}`);
   }
@@ -26,9 +30,11 @@ module.exports = {
   emailHost: process.env.EMAIL_HOST || 'smtp.gmail.com',
   emailPort: Number(process.env.EMAIL_PORT || 587),
   emailSecure: process.env.EMAIL_SECURE === 'true',
+  emailProvider: (process.env.EMAIL_PROVIDER || 'smtp').toLowerCase(),
   emailUser: process.env.EMAIL_USER || '',
   emailPass: process.env.EMAIL_PASS || '',
   emailFrom: process.env.EMAIL_FROM || process.env.EMAIL_USER || '',
+  resendApiKey: process.env.RESEND_API_KEY || '',
   // redisHost: process.env.REDIS_HOST || '127.0.0.1',
   // redisPort: Number(process.env.REDIS_PORT || 6379),
   // redisRequired: process.env.REDIS_REQUIRED === 'true' || process.env.NODE_ENV === 'production',

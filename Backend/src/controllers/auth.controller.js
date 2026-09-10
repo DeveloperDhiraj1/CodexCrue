@@ -13,7 +13,7 @@ const MAX_OTP_ATTEMPTS = 5;
 //   ? nodemailer.createTransport({ service: 'gmail', auth: { user: process.env.EMAIL_USER, pass: process.env.EMAIL_PASS } })
 //   : null;
 
-const transporter = config.emailUser && config.emailPass
+const transporter = config.emailProvider === 'smtp' && config.emailUser && config.emailPass
   ? nodemailer.createTransport({
       host: config.emailHost,
       port: config.emailPort,
@@ -69,6 +69,31 @@ async function createSession(user, req, res) {
 }
 
 async function sendEmailOrFail(message) {
+  if (config.emailProvider === 'resend') {
+    try {
+      const response = await fetch('https://api.resend.com/emails', {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${config.resendApiKey}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          from: message.from,
+          to: [message.to],
+          subject: message.subject,
+          text: message.text
+        })
+      });
+      if (!response.ok) {
+        const details = await response.text();
+        throw new Error(`Resend ${response.status}: ${details}`);
+      }
+      return;
+    } catch (error) {
+      console.error('[Email] Resend delivery failed:', error.message);
+      throw Object.assign(new Error('Unable to send verification email right now.'), { statusCode: 503 });
+    }
+  }
   if (!transporter) {
     if (process.env.NODE_ENV === 'production') {
       throw Object.assign(new Error('Email delivery is not configured.'), { statusCode: 503 });
