@@ -22,9 +22,10 @@ const transporter = process.env.EMAIL_USER && process.env.EMAIL_PASS
         user: process.env.EMAIL_USER,
         pass: process.env.EMAIL_PASS
       },
-      connectionTimeout: 10000,
-      greetingTimeout: 10000,
-      socketTimeout: 15000
+      family: 4,
+      connectionTimeout: 30000,
+      greetingTimeout: 30000,
+      socketTimeout: 30000
     })
   : null;
   if (transporter) {
