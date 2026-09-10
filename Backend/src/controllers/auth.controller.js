@@ -27,6 +27,15 @@ const transporter = process.env.EMAIL_USER && process.env.EMAIL_PASS
       socketTimeout: 15000
     })
   : null;
+  if (transporter) {
+  transporter.verify()
+    .then(() => {
+      console.log('✅ SMTP connection successful');
+    })
+    .catch((error) => {
+      console.error('❌ SMTP connection failed:', error);
+    });
+}
 
 const cookieOptions = () => ({
   httpOnly: true,
