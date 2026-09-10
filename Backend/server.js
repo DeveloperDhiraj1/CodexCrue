@@ -1,11 +1,9 @@
 const config = require('./src/config/env');
 const connectDB = require('./src/config/db');
-const { connectRedis } = require('./src/config/redis');
 const app = require('./src/app');
 
 async function startServer() {
   await connectDB();
-  await connectRedis();
 
   const server = app.listen(config.port, () => {
     console.log(`[CortexCrew Backend] Server is running on port ${config.port}`);
@@ -15,8 +13,7 @@ async function startServer() {
     console.log(`[CortexCrew Backend] ${signal} received; shutting down`);
     server.close(async () => {
       const { disconnectDB } = require('./src/config/db');
-      const { disconnectRedis } = require('./src/config/redis');
-      await Promise.all([disconnectDB(), disconnectRedis()]);
+      await disconnectDB();
       process.exit(0);
     });
   };
