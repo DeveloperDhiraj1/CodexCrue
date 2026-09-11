@@ -1,4 +1,5 @@
-const admin = require('firebase-admin');
+const { getApp, getApps, initializeApp, cert } = require('firebase-admin/app');
+const { getAuth } = require('firebase-admin/auth');
 const config = require('./env');
 
 let firebaseApp;
@@ -9,10 +10,10 @@ function getFirebaseApp() {
     throw new Error('Firebase Admin credentials are not configured.');
   }
 
-  firebaseApp = admin.apps.length > 0
-    ? admin.app()
-    : admin.initializeApp({
-        credential: admin.credential.cert({
+  firebaseApp = getApps().length > 0
+    ? getApp()
+    : initializeApp({
+        credential: cert({
           projectId: config.firebaseProjectId,
           clientEmail: config.firebaseClientEmail,
           privateKey: config.firebasePrivateKey
@@ -22,7 +23,7 @@ function getFirebaseApp() {
 }
 
 function getFirebaseAuth() {
-  return admin.auth(getFirebaseApp());
+  return getAuth(getFirebaseApp());
 }
 
 module.exports = { getFirebaseApp, getFirebaseAuth };
