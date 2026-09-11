@@ -27,7 +27,13 @@ function verifyFirebaseToken({ requireVerified = true } = {}) {
   return async (req, res, next) => {
     const header = req.headers.authorization || '';
     const token = header.startsWith('Bearer ') ? header.slice(7).trim() : '';
-    if (!token) return sendResponse(res, 401, false, 'Not authorized, Firebase token missing.', null);
+    if (!token) {
+      console.warn('[Firebase Auth] Missing bearer token.', {
+        hasAuthorizationHeader: Boolean(header),
+        authorizationScheme: header ? header.split(' ')[0] : null
+      });
+      return sendResponse(res, 401, false, 'Not authorized, Firebase token missing.', null);
+    }
 
     try {
       const decoded = await getFirebaseAuth().verifyIdToken(token);
@@ -45,7 +51,12 @@ function verifyFirebaseToken({ requireVerified = true } = {}) {
       return next();
     } catch (error) {
       if (error.statusCode) return sendResponse(res, error.statusCode, false, error.message, null);
-      console.error(`[Firebase Auth] Token verification failed: ${error.code || error.message}`);
+      console.error('[Firebase Auth] Token verification failed.', {
+        code: error.code || 'unknown',
+        message: error.message,
+        tokenLength: token.length,
+        tokenSegments: token.split('.').length
+      });
       return sendResponse(res, 401, false, 'Not authorized, Firebase token is invalid or expired.', null);
     }
   };

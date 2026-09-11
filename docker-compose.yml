@@ -25,7 +25,9 @@ services:
       - MONGO_URI=mongodb://mongodb:27017/cortexcrew
       - REDIS_HOST=redis
       - REDIS_PORT=6379
-      - JWT_SECRET=${JWT_SECRET:?Set JWT_SECRET in the environment}
+      - FIREBASE_PROJECT_ID=${FIREBASE_PROJECT_ID}
+      - FIREBASE_CLIENT_EMAIL=${FIREBASE_CLIENT_EMAIL}
+      - FIREBASE_PRIVATE_KEY=${FIREBASE_PRIVATE_KEY}
       - ML_SERVICE_URL=http://ml-service:8000
       - CORS_ORIGIN=http://localhost:3000
     depends_on:

@@ -32,7 +32,7 @@ export default function Register() {
   };
 
   const passwordStrength = getPasswordStrength(password);
-  const isStrongEnough = passwordStrength >= 3;
+  const isStrongEnough = passwordStrength >= 5;
   const isMatch = password && password === confirmPassword;
   const getMeterClass = () => passwordStrength <= 2 ? 'weak' : passwordStrength <= 4 ? 'ok' : 'strong';
 
@@ -45,7 +45,10 @@ export default function Register() {
     try {
       const credential = await createUserWithEmailAndPassword(firebaseAuth, email.trim(), password);
       await updateProfile(credential.user, { displayName: name.trim() });
-      await api.post('/auth/register', { name: name.trim() });
+      const firebaseIdToken = await credential.user.getIdToken(true);
+      await api.post('/auth/sync', { name: name.trim() }, {
+        headers: { Authorization: `Bearer ${firebaseIdToken}` }
+      });
       await sendEmailVerification(credential.user, {
         url: `${window.location.origin}/login`,
         handleCodeInApp: false

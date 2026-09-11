@@ -18,6 +18,17 @@ if (missingConfig.length > 0) {
   throw new Error(`Missing Firebase web configuration: ${missingConfig.join(', ')}`);
 }
 
+if (import.meta.env.VITE_FIREBASE_DEBUG === 'true') {
+  console.info('[Firebase Config]', {
+    projectId: firebaseConfig.projectId,
+    authDomain: firebaseConfig.authDomain,
+    appId: firebaseConfig.appId,
+    hasApiKey: Boolean(firebaseConfig.apiKey),
+    hasStorageBucket: Boolean(firebaseConfig.storageBucket),
+    hasMessagingSenderId: Boolean(firebaseConfig.messagingSenderId)
+  });
+}
+
 const firebaseApp = initializeApp(firebaseConfig);
 export const firebaseAuth = getAuth(firebaseApp);
 

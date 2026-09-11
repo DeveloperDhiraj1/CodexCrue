@@ -9,7 +9,10 @@ function profileName(firebaseUser) {
 }
 
 async function syncAndLoadProfile(firebaseUser) {
-  await api.post('/auth/sync', { name: profileName(firebaseUser) });
+  const firebaseIdToken = await firebaseUser.getIdToken();
+  await api.post('/auth/sync', { name: profileName(firebaseUser) }, {
+    headers: { Authorization: `Bearer ${firebaseIdToken}` }
+  });
   const response = await api.get('/auth/me');
   return {
     user: response.data.data,
