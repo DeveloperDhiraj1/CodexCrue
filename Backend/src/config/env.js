@@ -3,6 +3,16 @@ const path = require('path');
 
 dotenv.config({ path: path.resolve(__dirname, '../../.env') });
 
+function normalizeFirebasePrivateKey(value) {
+  return String(value || '')
+    .trim()
+    .replace(/^['"]|['"]$/g, '')
+    .replace(/\\n/g, '\n')
+    .replace(/\r\n/g, '\n')
+    .replace(/\r/g, '\n')
+    .trim();
+}
+
 if (process.env.NODE_ENV === 'production') {
   const missing = [
     'MONGO_URI',
@@ -22,7 +32,7 @@ module.exports = {
   mongoDnsServers: (process.env.MONGO_DNS_SERVERS || '').split(',').map((server) => server.trim()).filter(Boolean),
   firebaseProjectId: process.env.FIREBASE_PROJECT_ID || '',
   firebaseClientEmail: process.env.FIREBASE_CLIENT_EMAIL || '',
-  firebasePrivateKey: (process.env.FIREBASE_PRIVATE_KEY || '').replace(/\\n/g, '\n'),
+  firebasePrivateKey: normalizeFirebasePrivateKey(process.env.FIREBASE_PRIVATE_KEY),
   // redisHost: process.env.REDIS_HOST || '127.0.0.1',
   // redisPort: Number(process.env.REDIS_PORT || 6379),
   // redisRequired: process.env.REDIS_REQUIRED === 'true' || process.env.NODE_ENV === 'production',
