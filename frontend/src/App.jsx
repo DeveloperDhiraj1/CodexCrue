@@ -73,20 +73,16 @@ const CourseDetailsRoute = () => {
 const App = () => {
   const dispatch = useDispatch();
   const { loading, isAuthenticated, user } = useSelector((state) => state.auth);
-  const token = localStorage.getItem('token');
-
   useEffect(() => {
     dispatch(initializeAuth());
-    
-    const handleAuthExpired = () => {
+    const handleSignedOut = () => {
       dispatch(logoutUser());
     };
-    
-    window.addEventListener('auth:expired', handleAuthExpired);
-    return () => window.removeEventListener('auth:expired', handleAuthExpired);
+    window.addEventListener('firebase:signed-out', handleSignedOut);
+    return () => window.removeEventListener('firebase:signed-out', handleSignedOut);
   }, [dispatch]);
 
-  if (loading && localStorage.getItem('cortex_token')) {
+  if (loading) {
     return <LoadingFallback />;
   }
 
@@ -108,6 +104,7 @@ const App = () => {
             <Route path="/login" element={isAuthenticated ? <Navigate to={user?.role === 'admin' ? '/admin' : '/dashboard'} replace /> : <Login />} />
             <Route path="/register" element={isAuthenticated ? <Navigate to="/dashboard" replace /> : <Register />} />
             <Route path="/forgot-password" element={<ForgotPassword />} />
+            <Route path="/reset-password" element={<ResetPassword />} />
             <Route path="/reset-password/:token" element={<ResetPassword />} />
 
             {/* Protected Learner Routes */}

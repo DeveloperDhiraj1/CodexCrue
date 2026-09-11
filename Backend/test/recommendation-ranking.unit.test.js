@@ -1,5 +1,3 @@
-process.env.JWT_SECRET = 'unit-test-access-secret';
-process.env.JWT_REFRESH_SECRET = 'unit-test-refresh-secret';
 process.env.NODE_ENV = 'test';
 
 const assert = require('node:assert/strict');

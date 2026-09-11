@@ -1,268 +1,54 @@
-const crypto = require('crypto');
-const bcrypt = require('bcryptjs');
-const nodemailer = require('nodemailer');
+const { findApplicationUser } = require('../middleware/auth.middleware');
 const User = require('../models/User');
-const Session = require('../models/Session');
-const config = require('../config/env');
 const sendResponse = require('../utils/response');
-const { signAccessToken, createRefreshToken, hashToken, hashRefreshToken, hashOtp, secureCompare } = require('../utils/auth');
 
-const OTP_TTL_MS = 10 * 60 * 1000;
-const MAX_OTP_ATTEMPTS = 5;
-// const transporter = process.env.EMAIL_USER && process.env.EMAIL_PASS
-//   ? nodemailer.createTransport({ service: 'gmail', auth: { user: process.env.EMAIL_USER, pass: process.env.EMAIL_PASS } })
-//   : null;
-
-const transporter = config.emailProvider === 'smtp' && config.emailUser && config.emailPass
-  ? nodemailer.createTransport({
-      host: config.emailHost,
-      port: config.emailPort,
-      secure: config.emailSecure,
-      requireTLS: !config.emailSecure,
-      auth: {
-        user: config.emailUser,
-        pass: config.emailPass
-      },
-      family: 4,
-      connectionTimeout: 30000,
-      greetingTimeout: 30000,
-      socketTimeout: 30000
-    })
-  : null;
-  if (transporter) {
-  transporter.verify()
-    .then(() => {
-      console.log('✅ SMTP connection successful');
-    })
-    .catch((error) => {
-      console.error('❌ SMTP connection failed:', error);
-    });
+function fallbackName(email) {
+  return String(email || '').split('@')[0].slice(0, 100) || 'Learner';
 }
 
-const cookieOptions = () => ({
-  httpOnly: true,
-  secure: config.cookieSecure,
-  sameSite: 'lax',
-  path: '/api/auth',
-  maxAge: config.refreshTokenTtlDays * 24 * 60 * 60 * 1000
-});
+async function syncFirebaseUser(req, res, next) {
+  try {
+    const decoded = req.firebaseUser;
+    const email = String(decoded.email || '').trim().toLowerCase();
+    if (!email) return sendResponse(res, 400, false, 'A Firebase account email is required.', null);
 
-function setRefreshCookie(res, token) {
-  res.cookie(config.refreshCookieName, token, cookieOptions());
-}
+    let user = await findApplicationUser(decoded, { linkVerifiedUser: false });
+    if (user?.firebaseUid && user.firebaseUid !== decoded.uid) {
+      return sendResponse(res, 409, false, 'This email is already linked to another Firebase account.', null);
+    }
 
-function clearRefreshCookie(res) {
-  res.clearCookie(config.refreshCookieName, { ...cookieOptions(), maxAge: undefined });
-}
-
-async function createSession(user, req, res) {
-  const refreshToken = createRefreshToken();
-  await Session.create({
-    userId: user._id,
-    tokenHash: hashRefreshToken(refreshToken),
-    expiresAt: new Date(Date.now() + config.refreshTokenTtlDays * 24 * 60 * 60 * 1000),
-    userAgent: req.get('user-agent'),
-    ipAddress: req.ip
-  });
-  setRefreshCookie(res, refreshToken);
-  return signAccessToken(user);
-}
-
-async function sendEmailOrFail(message) {
-  if (config.emailProvider === 'resend') {
-    try {
-      const response = await fetch('https://api.resend.com/emails', {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${config.resendApiKey}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          from: message.from,
-          to: [message.to],
-          subject: message.subject,
-          text: message.text
-        })
+    if (!user) {
+      user = new User({
+        name: String(req.body.name || decoded.name || fallbackName(email)).trim().slice(0, 100),
+        email,
+        firebaseUid: decoded.email_verified ? decoded.uid : undefined,
+        isVerified: Boolean(decoded.email_verified),
+        isActive: true,
+        status: 'active'
       });
-      if (!response.ok) {
-        const details = await response.text();
-        throw new Error(`Resend ${response.status}: ${details}`);
-      }
-      return;
-    } catch (error) {
-      console.error('[Email] Resend delivery failed:', error.message);
-      throw Object.assign(new Error('Unable to send verification email right now.'), { statusCode: 503 });
+    } else {
+      if (req.body.name && !user.name) user.name = String(req.body.name).trim().slice(0, 100);
+      if (decoded.email_verified && !user.firebaseUid) user.firebaseUid = decoded.uid;
+      user.isVerified = Boolean(decoded.email_verified);
+      user.email = email;
     }
-  }
-  if (!transporter) {
-    if (process.env.NODE_ENV === 'production') {
-      throw Object.assign(new Error('Email delivery is not configured.'), { statusCode: 503 });
-    }
-    return;
-  }
-  try {
-    await transporter.sendMail(message);
+
+    await user.save();
+    return sendResponse(res, 200, true, 'Application profile synchronized.', user);
   } catch (error) {
-    console.error('[Email] Delivery failed:', error.code || error.message);
-    throw Object.assign(new Error('Unable to send verification email right now.'), { statusCode: 503 });
+    return next(error);
   }
 }
 
-exports.register = async (req, res, next) => {
-  try {
-    const { name, email, password } = req.body;
-    let user = await User.findOne({ email }).select('+password +otp +otpExpires +otpAttempts');
-    const otp = crypto.randomInt(100000, 1000000).toString();
-    const passwordHash = await bcrypt.hash(password, 12);
-
-    if (user?.isVerified) return sendResponse(res, 400, false, 'Email is already registered.', null);
-    if (!user) user = new User({ name, email, password: passwordHash, isVerified: false });
-    else {
-      user.name = name;
-      user.password = passwordHash;
-    }
-    user.otp = hashOtp(otp);
-    user.otpExpires = new Date(Date.now() + OTP_TTL_MS);
-    user.otpAttempts = 0;
-    user.isActive = true;
-    await user.save();
-
-    await sendEmailOrFail({
-      from: config.emailFrom,
-      to: email,
-      subject: 'Verify your CodexCrue account',
-      text: `Your verification code is ${otp}. It expires in 10 minutes.`
-    });
-    return sendResponse(res, 200, true, 'Verification code sent.', null);
-  } catch (error) {
-    next(error);
-  }
-};
-
-exports.verifyOTP = async (req, res, next) => {
-  try {
-    const { email, otp } = req.body;
-    const user = await User.findOne({ email }).select('+otp +otpExpires +otpAttempts');
-    if (!user || user.isVerified) return sendResponse(res, 400, false, 'Invalid verification request.', null);
-
-    user.otpAttempts = (user.otpAttempts || 0) + 1;
-    const valid = user.otp && user.otpExpires && user.otpExpires > new Date() &&
-      user.otpAttempts <= MAX_OTP_ATTEMPTS && secureCompare(hashOtp(otp), user.otp);
-    if (!valid) {
-      await user.save();
-      return sendResponse(res, 400, false, 'Invalid or expired verification code.', null);
-    }
-
-    user.isVerified = true;
-    user.otp = undefined;
-    user.otpExpires = undefined;
-    user.otpAttempts = 0;
-    await user.save();
-    const token = await createSession(user, req, res);
-    return sendResponse(res, 200, true, 'Account verified successfully.', { token, user });
-  } catch (error) {
-    next(error);
-  }
-};
-
-exports.login = async (req, res, next) => {
-  try {
-    const { email, password } = req.body;
-    const user = await User.findOne({ email }).select('+password');
-    if (!user || !user.isActive || !(await bcrypt.compare(password, user.password))) {
-      return sendResponse(res, 401, false, 'Invalid email or password.', null);
-    }
-    if (!user.isVerified) return sendResponse(res, 403, false, 'Please verify your email before signing in.', null);
-    const token = await createSession(user, req, res);
-    return sendResponse(res, 200, true, 'Logged in successfully.', { token, user });
-  } catch (error) {
-    next(error);
-  }
-};
-
-exports.refresh = async (req, res, next) => {
-  try {
-    const rawToken = req.cookies[config.refreshCookieName];
-    if (!rawToken) return sendResponse(res, 401, false, 'Refresh session is missing.', null);
-
-    const session = await Session.findOne({
-      tokenHash: hashRefreshToken(rawToken),
-      revokedAt: { $exists: false },
-      expiresAt: { $gt: new Date() }
-    }).select('+tokenHash');
-    if (!session) {
-      clearRefreshCookie(res);
-      return sendResponse(res, 401, false, 'Refresh session is invalid or expired.', null);
-    }
-
-    const user = await User.findById(session.userId).select('name email role isActive avatar');
-    if (!user || !user.isActive) {
-      session.revokedAt = new Date();
-      await session.save();
-      clearRefreshCookie(res);
-      return sendResponse(res, 401, false, 'Account is inactive or no longer exists.', null);
-    }
-
-    session.revokedAt = new Date();
-    await session.save();
-    const token = await createSession(user, req, res);
-    return sendResponse(res, 200, true, 'Session refreshed.', { token, user });
-  } catch (error) {
-    next(error);
-  }
-};
-
-exports.logout = async (req, res, next) => {
-  try {
-    const rawToken = req.cookies[config.refreshCookieName];
-    if (rawToken) await Session.updateOne({ tokenHash: hashRefreshToken(rawToken) }, { $set: { revokedAt: new Date() } });
-    clearRefreshCookie(res);
-    return sendResponse(res, 200, true, 'Logged out successfully.', null);
-  } catch (error) {
-    next(error);
-  }
-};
-
-exports.forgotPassword = async (req, res, next) => {
-  try {
-    const user = await User.findOne({ email: req.body.email }).select('+resetPasswordToken +resetPasswordExpires');
-    if (user && user.isActive) {
-      const rawToken = crypto.randomBytes(32).toString('hex');
-      user.resetPasswordToken = hashToken(rawToken);
-      user.resetPasswordExpires = new Date(Date.now() + 30 * 60 * 1000);
-      await user.save();
-      await sendEmailOrFail({
-        from: config.emailFrom,
-        to: user.email,
-        subject: 'Reset your CodexCrue password',
-        text: `Use this password reset token within 30 minutes: ${rawToken}`
-      });
-    }
-    return sendResponse(res, 200, true, 'If that account exists, recovery instructions have been sent.', null);
-  } catch (error) {
-    next(error);
-  }
-};
-
-exports.resetPassword = async (req, res, next) => {
-  try {
-    const user = await User.findOne({
-      resetPasswordToken: hashToken(req.params.token),
-      resetPasswordExpires: { $gt: new Date() }
-    }).select('+resetPasswordToken +resetPasswordExpires');
-    if (!user) return sendResponse(res, 400, false, 'Invalid or expired password reset token.', null);
-
-    user.password = await bcrypt.hash(req.body.password, 12);
-    user.resetPasswordToken = undefined;
-    user.resetPasswordExpires = undefined;
-    await user.save();
-    await Session.updateMany({ userId: user._id, revokedAt: { $exists: false } }, { $set: { revokedAt: new Date() } });
-    return sendResponse(res, 200, true, 'Password reset successfully.', null);
-  } catch (error) {
-    next(error);
-  }
-};
+// Firebase creates the credential and sends verification/reset email. These
+// endpoints only synchronize Firebase identity with the MongoDB user profile.
+exports.register = syncFirebaseUser;
+exports.sync = syncFirebaseUser;
 
 exports.me = async (req, res) => {
   return sendResponse(res, 200, true, 'Authenticated user retrieved.', req.authUser);
+};
+
+exports.logout = async (_req, res) => {
+  return sendResponse(res, 200, true, 'Logged out successfully.', null);
 };

@@ -4,7 +4,10 @@ const config = require('../config/env');
 
 async function checkReadiness() {
   const checks = {
-    mongo: mongoose.connection.readyState === 1
+    mongo: mongoose.connection.readyState === 1,
+    // Redis is optional in the current deployment. Keep it in the readiness
+    // contract so enabling REDIS_REQUIRED later fails closed.
+    redis: process.env.REDIS_REQUIRED !== 'true'
   };
   
   try {

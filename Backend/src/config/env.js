@@ -4,14 +4,13 @@ const path = require('path');
 dotenv.config({ path: path.resolve(__dirname, '../../.env') });
 
 if (process.env.NODE_ENV === 'production') {
-  const missing = ['MONGO_URI', 'JWT_SECRET', 'JWT_REFRESH_SECRET', 'CORS_ORIGIN']
-    .filter((name) => !process.env[name]);
-  const emailProvider = (process.env.EMAIL_PROVIDER || 'smtp').toLowerCase();
-  if (emailProvider === 'resend' && !process.env.RESEND_API_KEY) missing.push('RESEND_API_KEY');
-  if (emailProvider === 'smtp') {
-    if (!process.env.EMAIL_USER) missing.push('EMAIL_USER');
-    if (!process.env.EMAIL_PASS) missing.push('EMAIL_PASS');
-  }
+  const missing = [
+    'MONGO_URI',
+    'CORS_ORIGIN',
+    'FIREBASE_PROJECT_ID',
+    'FIREBASE_CLIENT_EMAIL',
+    'FIREBASE_PRIVATE_KEY'
+  ].filter((name) => !process.env[name]);
   if (missing.length > 0) {
     throw new Error(`Missing required production environment variables: ${missing.join(', ')}`);
   }
@@ -21,20 +20,9 @@ module.exports = {
   port: Number(process.env.PORT || 5000),
   mongoUri: process.env.MONGO_URI || 'mongodb://127.0.0.1:27017/cortexcrew',
   mongoDnsServers: (process.env.MONGO_DNS_SERVERS || '').split(',').map((server) => server.trim()).filter(Boolean),
-  jwtSecret: process.env.JWT_SECRET,
-  jwtRefreshSecret: process.env.JWT_REFRESH_SECRET,
-  jwtExpiresIn: process.env.JWT_EXPIRE || '15m',
-  refreshTokenTtlDays: Number(process.env.REFRESH_TOKEN_TTL_DAYS || 30),
-  refreshCookieName: process.env.REFRESH_COOKIE_NAME || 'codex_refresh_token',
-  cookieSecure: process.env.NODE_ENV === 'production',
-  emailHost: process.env.EMAIL_HOST || 'smtp.gmail.com',
-  emailPort: Number(process.env.EMAIL_PORT || 587),
-  emailSecure: process.env.EMAIL_SECURE === 'true',
-  emailProvider: (process.env.EMAIL_PROVIDER || 'smtp').toLowerCase(),
-  emailUser: process.env.EMAIL_USER || '',
-  emailPass: process.env.EMAIL_PASS || '',
-  emailFrom: process.env.EMAIL_FROM || process.env.EMAIL_USER || '',
-  resendApiKey: process.env.RESEND_API_KEY || '',
+  firebaseProjectId: process.env.FIREBASE_PROJECT_ID || '',
+  firebaseClientEmail: process.env.FIREBASE_CLIENT_EMAIL || '',
+  firebasePrivateKey: (process.env.FIREBASE_PRIVATE_KEY || '').replace(/\\n/g, '\n'),
   // redisHost: process.env.REDIS_HOST || '127.0.0.1',
   // redisPort: Number(process.env.REDIS_PORT || 6379),
   // redisRequired: process.env.REDIS_REQUIRED === 'true' || process.env.NODE_ENV === 'production',

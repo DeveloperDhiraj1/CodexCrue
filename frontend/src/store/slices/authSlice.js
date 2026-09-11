@@ -1,39 +1,59 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
+import { onAuthStateChanged, reload, signInWithEmailAndPassword, signOut } from 'firebase/auth';
 import api from '../../services/api';
+import { firebaseAuth, waitForFirebaseUser } from '../../services/firebase';
+import { firebaseErrorMessage } from '../../services/firebaseErrors';
 
-export const loginUser = createAsyncThunk('auth/login', async (credentials, thunkAPI) => {
+function profileName(firebaseUser) {
+  return firebaseUser.displayName || firebaseUser.email?.split('@')[0] || 'Learner';
+}
+
+async function syncAndLoadProfile(firebaseUser) {
+  await api.post('/auth/sync', { name: profileName(firebaseUser) });
+  const response = await api.get('/auth/me');
+  return {
+    user: response.data.data,
+    token: await firebaseUser.getIdToken()
+  };
+}
+
+export const loginUser = createAsyncThunk('auth/login', async ({ email, password }, thunkAPI) => {
   try {
-    const response = await api.post('/auth/login', credentials);
-    localStorage.setItem('cortex_token', response.data.data.token);
-    return response.data.data;
+    const credential = await signInWithEmailAndPassword(firebaseAuth, email.trim(), password);
+    await reload(credential.user);
+    if (!credential.user.emailVerified) {
+      await signOut(firebaseAuth);
+      return thunkAPI.rejectWithValue('Please verify your email before signing in.');
+    }
+    return await syncAndLoadProfile(credential.user);
   } catch (error) {
-    return thunkAPI.rejectWithValue(error.response?.data?.message || 'Login failed');
+    return thunkAPI.rejectWithValue(firebaseErrorMessage(error, 'Login failed.'));
   }
 });
 
 export const initializeAuth = createAsyncThunk('auth/initialize', async (_, thunkAPI) => {
-  const token = localStorage.getItem('cortex_token');
-  if (!token) return null;
   try {
-    const response = await api.get('/auth/me');
-    return response.data.data;
+    const firebaseUser = await waitForFirebaseUser();
+    if (!firebaseUser) return null;
+    await reload(firebaseUser);
+    if (!firebaseUser.emailVerified) return null;
+    return await syncAndLoadProfile(firebaseUser);
   } catch (error) {
-    localStorage.removeItem('cortex_token');
-    return thunkAPI.rejectWithValue(error.response?.data?.message || 'Session expired');
+    return thunkAPI.rejectWithValue(firebaseErrorMessage(error, 'Session could not be restored.'));
   }
 });
 
 export const logoutUser = createAsyncThunk('auth/logout', async () => {
-  try { await api.post('/auth/logout'); } finally { localStorage.removeItem('cortex_token'); }
+  await signOut(firebaseAuth);
 });
 
 const authSlice = createSlice({
   name: 'auth',
   initialState: {
     user: null,
-    token: localStorage.getItem('cortex_token') || null,
-    isAuthenticated: !!localStorage.getItem('cortex_token'),
-    loading: false,
+    token: null,
+    isAuthenticated: false,
+    loading: true,
     error: null
   },
   reducers: {
@@ -41,7 +61,6 @@ const authSlice = createSlice({
       state.user = null;
       state.token = null;
       state.isAuthenticated = false;
-      localStorage.removeItem('cortex_token');
     }
   },
   extraReducers: (builder) => {
@@ -62,12 +81,13 @@ const authSlice = createSlice({
       })
       .addCase(initializeAuth.pending, (state) => {
         state.loading = true;
+        state.error = null;
       })
       .addCase(initializeAuth.fulfilled, (state, action) => {
         state.loading = false;
-        state.user = action.payload?.user || action.payload || null;
+        state.user = action.payload?.user || null;
         state.isAuthenticated = Boolean(action.payload);
-        state.token = localStorage.getItem('cortex_token');
+        state.token = action.payload?.token || null;
       })
       .addCase(initializeAuth.rejected, (state, action) => {
         state.loading = false;
@@ -80,8 +100,14 @@ const authSlice = createSlice({
         state.user = null;
         state.token = null;
         state.isAuthenticated = false;
+        state.loading = false;
       });
   }
+});
+
+// Keep Redux synchronized if Firebase signs out in another tab or session.
+onAuthStateChanged(firebaseAuth, (firebaseUser) => {
+  if (!firebaseUser) window.dispatchEvent(new Event('firebase:signed-out'));
 });
 
 export const { logout } = authSlice.actions;
