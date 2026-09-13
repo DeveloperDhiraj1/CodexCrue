@@ -2498,6 +2498,7 @@ img {
 .course-back-link:hover { color:var(--primary); }
 .learner-course-hero { display:flex; justify-content:space-between; gap:28px; align-items:center; padding:34px; border-radius:24px; background:linear-gradient(135deg, #123d52 0%, #0f766e 100%); color:#fff; box-shadow:0 18px 40px #123d5226; }
 .learner-course-hero-copy { min-width:0; }
+.learner-course-hero .course-meta { display:flex; flex-wrap:wrap; align-items:center; gap:8px; margin-bottom:14px; }
 .learner-course-hero .course-meta { margin-bottom:14px; }
 .learner-course-hero .tag { border-color:#ffffff40; background:#ffffff18; color:#e6fffb; }
 .learner-course-hero .tag.navy { background:#ffffff26; color:#fff; }
@@ -2506,7 +2507,12 @@ img {
 .learner-course-hero p { max-width:760px; margin:14px 0 0; color:#d7f4f1; font-size:15px; line-height:1.7; }
 .learner-course-hero .course-meta + h1 { margin-top:0; }
 .learner-course-hero .course-meta:nth-of-type(2) { margin-top:20px; margin-bottom:0; }
-.learner-course-hero-mark { display:grid; place-items:center; width:128px; height:128px; flex:0 0 128px; border:1px solid #ffffff30; border-radius:30px; background:#ffffff18; color:#fff; font:800 62px 'Outfit', sans-serif; }
+.learner-course-skills { display:grid; gap:9px; margin-top:21px; }
+.learner-course-skills-label { color:#bce8e4; font-size:10px; font-weight:900; letter-spacing:.12em; text-transform:uppercase; }
+.learner-course-skill-list { display:flex; flex-wrap:wrap; gap:8px; }
+.learner-course-skill { padding:7px 11px; border:1px solid #ffffff38; border-radius:9px; background:#ffffff18; color:#fff; font-size:12px; font-weight:700; white-space:nowrap; }
+.learner-course-hero-mark { display:grid; place-items:center; width:128px; height:128px; flex:0 0 128px; overflow:hidden; border:1px solid #ffffff30; border-radius:30px; background:#ffffff18; color:#fff; font:800 62px 'Outfit', sans-serif; }
+.learner-course-hero-mark img { width:100%; height:100%; object-fit:cover; }
 .learner-course-actions { display:flex; flex-wrap:wrap; gap:10px; margin-top:24px; }
 .learner-course-actions .button { text-decoration:none; }
 .learner-course-actions .button-primary { background:#fff; color:#0f766e; }

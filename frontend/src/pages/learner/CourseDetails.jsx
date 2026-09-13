@@ -86,6 +86,7 @@ export default function CourseDetails() {
   };
 
   const resourceUrl = getResourceUrl(course);
+  const skills = Array.isArray(course?.skills) ? course.skills : String(course?.skills || '').split(',').map((skill) => skill.trim()).filter(Boolean);
   const completion = progress?.completionPercentage || 0;
 
   return <AppShell><div className="page-wrap learner-course-page">
@@ -96,14 +97,14 @@ export default function CourseDetails() {
           <div className="course-meta"><span className="tag navy">{course.category || 'Course'}</span><span className="tag">{course.difficulty || 'Self-paced'}</span>{course.isFree && <span className="tag green">Free</span>}</div>
           <h1>{course.title}</h1>
           <p>{course.description || 'Build practical skills with a focused, structured learning experience.'}</p>
-          <div className="course-meta">{course.skills?.map((skill) => <span className="tag" key={skill}>{skill}</span>)}</div>
+          {skills.length > 0 && <div className="learner-course-skills"><span className="learner-course-skills-label">Technology stack</span><div className="learner-course-skill-list">{skills.map((skill) => <span className="learner-course-skill" key={skill}>{skill}</span>)}</div></div>}
           <div className="learner-course-actions">
             {tracking ? <button className="button button-danger" onClick={stopTracking}>Stop tracking</button> : <button className="button button-primary" onClick={startLearning}>Start learning & track ↗</button>}
             {resourceUrl && <a className="button button-ghost" href={resourceUrl} target="_blank" rel="noreferrer">Open resource ↗</a>}
           </div>
           {tracking && <div className="course-tracking-note"><span className="tracking-dot" /> Study session is active. Keep this page open while learning.</div>}
         </div>
-        <div className="learner-course-hero-mark">{course.title?.charAt(0)?.toUpperCase() || 'C'}</div>
+        <div className="learner-course-hero-mark">{course.thumbnail ? <img src={course.thumbnail} alt="" /> : <span>{course.title?.charAt(0)?.toUpperCase() || 'C'}</span>}</div>
       </section>
 
       {message && <div className="profile-success learner-course-message">✓ {message}</div>}
