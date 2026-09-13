@@ -1,5 +1,5 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
-import { onAuthStateChanged, reload, signInWithEmailAndPassword, signOut } from 'firebase/auth';
+import { onAuthStateChanged, reload, sendEmailVerification, signInWithEmailAndPassword, signOut } from 'firebase/auth';
 import api from '../../services/api';
 import { firebaseAuth, waitForFirebaseUser } from '../../services/firebase';
 import { firebaseErrorMessage } from '../../services/firebaseErrors';
@@ -25,8 +25,12 @@ export const loginUser = createAsyncThunk('auth/login', async ({ email, password
     const credential = await signInWithEmailAndPassword(firebaseAuth, email.trim(), password);
     await reload(credential.user);
     if (!credential.user.emailVerified) {
+      await sendEmailVerification(credential.user, {
+        url: `${window.location.origin}/login`,
+        handleCodeInApp: false
+      });
       await signOut(firebaseAuth);
-      return thunkAPI.rejectWithValue('Please verify your email before signing in.');
+      return thunkAPI.rejectWithValue('Verification email sent. Please check your inbox, then sign in again.');
     }
     return await syncAndLoadProfile(credential.user);
   } catch (error) {
