@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
+import { useSelector } from 'react-redux';
 import api from '../../services/api';
 import AppShell from '../../components/common/AppShell';
 
@@ -14,6 +15,7 @@ function getTimeGreeting(date) {
 
 const Dashboard = () => {
   const navigate = useNavigate();
+  const authUser = useSelector((state) => state.auth.user);
   const [loading, setLoading] = useState(true);
   const [profile, setProfile] = useState(null);
   const [goals, setGoals] = useState([]);
@@ -80,7 +82,7 @@ const Dashboard = () => {
     );
   }
 
-  const firstName = (profile?.userId?.name || profile?.name || 'Learner').split(' ')[0];
+  const firstName = (profile?.userId?.name || profile?.name || authUser?.name || authUser?.displayName || 'Learner').trim().split(/\s+/)[0];
   const greeting = getTimeGreeting(currentTime);
   const currentGoal = profile?.learningGoal || 'Set your goal';
   const overallProgress = learningPath?.overallProgress || 0;
