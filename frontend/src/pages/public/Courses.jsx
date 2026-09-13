@@ -16,6 +16,12 @@ const getCategoryEmoji = (category) => {
   return map[key] || map.default;
 };
 
+const getCourseThumbnail = (course) => {
+  if (course?.thumbnail || course?.thumbnailUrl || course?.imageUrl) return course.thumbnail || course.thumbnailUrl || course.imageUrl;
+  const match = String(course?.sourceUrl || '').match(/(?:youtube\.com\/(?:watch\?v=|embed\/)|youtu\.be\/)([\w-]{11})/i);
+  return match ? `https://img.youtube.com/vi/${match[1]}/hqdefault.jpg` : '';
+};
+
 export default function PublicCourses() {
   const [courses, setCourses] = useState([]);
   const [search, setSearch] = useState('');
@@ -79,8 +85,8 @@ export default function PublicCourses() {
           <div className="public-course-grid">
             {courses.map(course => (
               <article className="public-course-card" key={course._id}>
-                <div className="public-course-cover">
-                  {getCategoryEmoji(course.category || course.provider || '')}
+                <div className={`public-course-cover ${getCourseThumbnail(course) ? 'has-thumbnail' : ''}`}>
+                  {getCourseThumbnail(course) ? <img src={getCourseThumbnail(course)} alt={`${course.title} thumbnail`} /> : getCategoryEmoji(course.category || course.provider || '')}
                 </div>
                 <div className="public-course-body">
                   <div className="public-course-meta-row">
