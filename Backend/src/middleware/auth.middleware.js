@@ -23,7 +23,7 @@ async function findApplicationUser(decoded, { linkVerifiedUser = true } = {}) {
   return user;
 }
 
-function verifyFirebaseToken({ requireVerified = true } = {}) {
+function verifyFirebaseToken({ requireVerified = true, requireApplicationUser = true } = {}) {
   return async (req, res, next) => {
     const header = req.headers.authorization || '';
     const token = header.startsWith('Bearer ') ? header.slice(7).trim() : '';
@@ -41,13 +41,17 @@ function verifyFirebaseToken({ requireVerified = true } = {}) {
         return sendResponse(res, 403, false, 'Please verify your email before continuing.', null);
       }
       const user = await findApplicationUser(decoded);
-      if (!user) return sendResponse(res, 404, false, 'Application user profile not found.', null);
-      if (!user.isActive || (user.status && user.status !== 'active')) {
+      if (!user && requireApplicationUser) {
+        return sendResponse(res, 404, false, 'Application user profile not found.', null);
+      }
+      if (user && (!user.isActive || (user.status && user.status !== 'active'))) {
         return sendResponse(res, 401, false, 'Account is inactive or no longer exists.', null);
       }
       req.firebaseUser = decoded;
-      req.user = { id: user._id.toString(), uid: decoded.uid, role: user.role };
-      req.authUser = user;
+      if (user) {
+        req.user = { id: user._id.toString(), uid: decoded.uid, role: user.role };
+        req.authUser = user;
+      }
       return next();
     } catch (error) {
       if (error.statusCode) return sendResponse(res, error.statusCode, false, error.message, null);
