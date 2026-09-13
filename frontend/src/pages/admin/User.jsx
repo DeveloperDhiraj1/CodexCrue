@@ -32,7 +32,7 @@ export default function AdminUsers() {
             <p className="page-subtitle">Review registered learners and manage account access.</p>
           </div>
           <input
-            className="courses-search"
+            className="courses-search admin-user-search"
             style={{ maxWidth: 260 }}
             value={search}
             onChange={e => setSearch(e.target.value)}
@@ -44,7 +44,7 @@ export default function AdminUsers() {
 
         <div className="card">
           <div className="card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <div className="card-title">User Directory</div>
+            <div><div className="page-eyebrow">Access control</div><div className="card-title">User Directory</div></div>
             <span className="badge badge-gray">{filteredUsers.length} of {users.length} users</span>
           </div>
           {loading ? (
