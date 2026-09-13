@@ -1,8 +1,10 @@
 import React, { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import api from '../../services/api';
 import AppShell from '../../components/common/AppShell';
 
 const MyLearning = () => {
+  const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [progressData, setProgressData] = useState([]);
   const [completedCourses, setCompletedCourses] = useState([]);
@@ -30,10 +32,8 @@ const MyLearning = () => {
     fetchLearningData();
   }, []);
 
-  const handleAction = (url) => {
-    if (url) {
-      window.open(url, '_blank');
-    }
+  const handleAction = (course) => {
+    if (course?._id) navigate(`/courses/${course._id}`);
   };
 
   if (loading) {
@@ -57,7 +57,6 @@ const MyLearning = () => {
 
     const title = course.title || 'Unknown Course';
     const provider = course.provider || 'Unknown Provider';
-    const url = course.sourceUrl;
     const progressPct = isCompleted ? 100 : (item.completionPercentage || 0);
     const studyMinutes = item.studyMinutes || 0;
 
@@ -85,7 +84,7 @@ const MyLearning = () => {
             <button 
               className={`btn ${isCompleted ? 'btn-secondary' : 'btn-primary'}`} 
               style={{ width: '100%' }}
-              onClick={() => handleAction(url)}
+              onClick={() => handleAction(course)}
             >
               {isCompleted ? 'Review Course' : 'Continue Learning'}
             </button>
