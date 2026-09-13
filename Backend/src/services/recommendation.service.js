@@ -70,7 +70,7 @@ class RecommendationService {
       status: 'published',
       isFree: true,
       _id: { $nin: completedCourseIds }
-    }).select('title description provider sourceUrl isFree qualityScore skills category difficulty tags rating duration prerequisites language contentType').populate('prerequisites', 'title skills difficulty').limit(config.mlCandidateLimit).lean();
+    }).select('title description provider sourceUrl thumbnail isFree qualityScore skills category difficulty tags rating duration prerequisites language contentType').populate('prerequisites', 'title skills difficulty').limit(config.mlCandidateLimit).lean();
 
     const eligibleCandidates = candidates.filter((course) => !isYouTubeShort(course) && isPrerequisiteEligible(course, completedCourseIds));
     if (eligibleCandidates.length === 0) return [];

@@ -5,6 +5,12 @@ import api from '../../services/api';
 
 const getResourceUrl = (course) => course?.sourceUrl || course?.resources?.find((resource) => resource?.url)?.url || '';
 
+const getCourseThumbnail = (course) => {
+  if (course?.thumbnail || course?.thumbnailUrl || course?.imageUrl) return course.thumbnail || course.thumbnailUrl || course.imageUrl;
+  const match = String(course?.sourceUrl || '').match(/(?:youtube\.com\/(?:watch\?v=|embed\/)|youtu\.be\/)([\w-]{11})/i);
+  return match ? `https://img.youtube.com/vi/${match[1]}/hqdefault.jpg` : '';
+};
+
 export default function CourseDetails() {
   const { id } = useParams();
   const [course, setCourse] = useState(null);
@@ -86,6 +92,7 @@ export default function CourseDetails() {
   };
 
   const resourceUrl = getResourceUrl(course);
+  const thumbnail = getCourseThumbnail(course);
   const skills = Array.isArray(course?.skills) ? course.skills : String(course?.skills || '').split(',').map((skill) => skill.trim()).filter(Boolean);
   const completion = progress?.completionPercentage || 0;
 
@@ -104,7 +111,7 @@ export default function CourseDetails() {
           </div>
           {tracking && <div className="course-tracking-note"><span className="tracking-dot" /> Study session is active. Keep this page open while learning.</div>}
         </div>
-        <div className="learner-course-hero-mark">{course.thumbnail ? <img src={course.thumbnail} alt="" /> : <span>{course.title?.charAt(0)?.toUpperCase() || 'C'}</span>}</div>
+        <div className="learner-course-hero-mark">{thumbnail ? <img src={thumbnail} alt={`${course.title} thumbnail`} /> : <span>{course.title?.charAt(0)?.toUpperCase() || 'C'}</span>}</div>
       </section>
 
       {message && <div className="profile-success learner-course-message">✓ {message}</div>}

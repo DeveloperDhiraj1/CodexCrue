@@ -3,6 +3,12 @@ import { useNavigate } from 'react-router-dom';
 import api from '../../services/api';
 import AppShell from '../../components/common/AppShell';
 
+const getCourseThumbnail = (course) => {
+  if (course?.thumbnail || course?.thumbnailUrl || course?.imageUrl) return course.thumbnail || course.thumbnailUrl || course.imageUrl;
+  const match = String(course?.sourceUrl || '').match(/(?:youtube\.com\/(?:watch\?v=|embed\/)|youtu\.be\/)([\w-]{11})/i);
+  return match ? `https://img.youtube.com/vi/${match[1]}/hqdefault.jpg` : '';
+};
+
 const MyLearning = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
@@ -27,8 +33,9 @@ const MyLearning = () => {
     if (!course?._id) return null;
     const progress = isCompleted ? 100 : Math.min(100, Math.max(0, item.completionPercentage || 0));
     const skills = course.skills?.slice(0, 3) || [];
+    const thumbnail = getCourseThumbnail(course);
     return <article className="learning-course-card" key={item._id || course._id}>
-      <div className="learning-course-cover"><span>{course.title?.charAt(0)?.toUpperCase() || 'C'}</span><small>{course.contentType || 'COURSE'}</small></div>
+      <div className={`learning-course-cover ${thumbnail ? 'has-thumbnail' : ''}`}>{thumbnail ? <img src={thumbnail} alt={`${course.title} thumbnail`} /> : <span>{course.title?.charAt(0)?.toUpperCase() || 'C'}</span>}<small>{course.contentType || 'COURSE'}</small></div>
       <div className="learning-course-body">
         <div className="learning-course-topline"><span>{course.provider || 'CodexCrue'}</span><span className={`learning-status ${isCompleted ? 'complete' : 'active'}`}>{isCompleted ? 'Completed' : 'In progress'}</span></div>
         <h2>{course.title || 'Untitled course'}</h2>
