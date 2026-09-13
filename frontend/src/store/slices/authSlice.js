@@ -68,6 +68,9 @@ const authSlice = createSlice({
       state.user = null;
       state.token = null;
       state.isAuthenticated = false;
+    },
+    avatarUpdated: (state, action) => {
+      if (state.user) state.user.avatar = action.payload;
     }
   },
   extraReducers: (builder) => {
@@ -117,5 +120,5 @@ onAuthStateChanged(firebaseAuth, (firebaseUser) => {
   if (!firebaseUser) window.dispatchEvent(new Event('firebase:signed-out'));
 });
 
-export const { logout } = authSlice.actions;
+export const { logout, avatarUpdated } = authSlice.actions;
 export default authSlice.reducer;
